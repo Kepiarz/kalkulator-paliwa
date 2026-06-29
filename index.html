@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#15232E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Paliwo">
+<title>Kalkulator Paliwa</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon-64.png" sizes="64x64">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+  :root{
+    --bg:#15232E; --panel:#1F3B4D; --panel-2:#24445A;
+    --line:#33566B; --amber:#F2A93B; --amber-soft:#caa15f;
+    --teal:#2FA7BE; --cream:#F4EFE2; --muted:#88A1AF; --danger:#E0683C;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0; height:100%}
+  body{
+    background:
+      radial-gradient(120% 60% at 50% -10%, #20384a 0%, var(--bg) 55%);
+    color:var(--cream);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    min-height:100dvh;
+    padding:
+      calc(env(safe-area-inset-top) + 14px)
+      calc(env(safe-area-inset-right) + 16px)
+      calc(env(safe-area-inset-bottom) + 22px)
+      calc(env(safe-area-inset-left) + 16px);
+    display:flex; justify-content:center;
+  }
+  .wrap{width:100%; max-width:460px}
+
+  header{display:flex; align-items:center; gap:10px; margin:2px 2px 16px}
+  .logo{width:30px;height:30px;flex:0 0 30px}
+  header h1{font-size:1.02rem; font-weight:650; letter-spacing:.2px; margin:0}
+  header span{display:block; font-size:.72rem; color:var(--muted); font-weight:500; margin-top:1px}
+
+  /* ---- Trip-computer readout ---- */
+  .readout{
+    background:linear-gradient(180deg,#12202b,#0e1a23);
+    border:1px solid var(--line);
+    border-radius:18px; padding:20px 20px 16px;
+    box-shadow:inset 0 1px 0 #2c4d63, 0 10px 30px rgba(0,0,0,.35);
+    position:relative; overflow:hidden;
+  }
+  .readout::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(180deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px);}
+  .ro-label{font-size:.74rem; letter-spacing:.18em; text-transform:uppercase; color:var(--amber-soft)}
+  .ro-main{
+    font-family:ui-monospace,"SF Mono","JetBrains Mono","DM Mono",Menlo,monospace;
+    color:var(--amber); font-weight:600; line-height:1;
+    font-size:clamp(2.9rem,16vw,3.9rem);
+    text-shadow:0 0 18px rgba(242,169,59,.28);
+    display:flex; align-items:baseline; gap:.12em; margin:6px 0 2px;
+  }
+  .ro-main .cur{font-size:.42em; color:var(--amber-soft); font-weight:500}
+  .ro-sub{display:flex; gap:18px; margin-top:14px; border-top:1px solid #1d3340; padding-top:12px}
+  .stat{flex:1}
+  .stat .k{font-size:.68rem; color:var(--muted); letter-spacing:.04em}
+  .stat .v{font-family:ui-monospace,Menlo,monospace; font-size:1.02rem; color:var(--cream); margin-top:3px}
+
+  /* ---- Inputs ---- */
+  .card{
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:16px; margin-top:14px; padding:14px 14px 16px;
+  }
+  .field + .field{margin-top:14px}
+  .flabel{font-size:.78rem; color:var(--muted); margin:0 2px 7px; font-weight:550; letter-spacing:.02em}
+  .row{display:flex; gap:10px}
+  .num{
+    flex:1 1 auto; min-width:0;
+    background:#12202b; border:1px solid var(--line); border-radius:11px;
+    color:var(--cream); font-size:1.4rem; font-weight:600;
+    font-family:ui-monospace,Menlo,monospace;
+    padding:11px 14px; width:100%;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .num:focus{outline:none; border-color:var(--teal); box-shadow:0 0 0 3px rgba(47,167,190,.18)}
+  .num::placeholder{color:#46606f}
+
+  /* segmented unit toggle */
+  .seg{display:flex; flex:0 0 auto; background:#12202b; border:1px solid var(--line);
+       border-radius:11px; padding:3px; gap:3px}
+  .seg button{
+    border:0; background:transparent; color:var(--muted);
+    font-size:.86rem; font-weight:600; font-family:inherit;
+    padding:9px 12px; border-radius:8px; cursor:pointer; white-space:nowrap;
+    transition:background .15s,color .15s;
+  }
+  .seg button[aria-pressed="true"]{background:var(--teal); color:#08222a; box-shadow:0 2px 6px rgba(0,0,0,.25)}
+
+  .cur-in{
+    flex:0 0 78px; text-align:center; background:#12202b; border:1px solid var(--line);
+    border-radius:11px; color:var(--amber-soft); font-weight:600; font-size:1.05rem;
+    font-family:ui-monospace,Menlo,monospace; padding:11px 6px;
+  }
+  .cur-in:focus{outline:none; border-color:var(--teal); box-shadow:0 0 0 3px rgba(47,167,190,.18)}
+
+  /* people stepper */
+  .stepper{display:flex; align-items:center; gap:0; background:#12202b;
+           border:1px solid var(--line); border-radius:11px; overflow:hidden}
+  .stepper button{
+    width:54px; height:50px; border:0; background:transparent; color:var(--cream);
+    font-size:1.5rem; font-weight:600; cursor:pointer; flex:0 0 auto;
+  }
+  .stepper button:active{background:var(--panel-2)}
+  .stepper .count{flex:1; text-align:center; font-family:ui-monospace,Menlo,monospace;
+                  font-size:1.3rem; font-weight:600; border-left:1px solid var(--line);
+                  border-right:1px solid var(--line); padding:11px 0}
+
+  .hint{font-size:.72rem; color:var(--muted); text-align:center; margin:16px 4px 0; line-height:1.5}
+  .install{display:none; margin-top:12px; width:100%; padding:13px; border-radius:12px;
+           border:1px solid var(--teal); background:transparent; color:var(--teal);
+           font-size:.92rem; font-weight:650; font-family:inherit; cursor:pointer}
+  @media (prefers-reduced-motion:no-preference){
+    .ro-main{transition:text-shadow .2s}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img class="logo" src="icons/icon-192.png" alt="">
+    <div>
+      <h1>Kalkulator Paliwa</h1>
+      <span>Koszt trasy i podział na osoby</span>
+    </div>
+  </header>
+
+  <!-- Readout -->
+  <section class="readout" aria-live="polite">
+    <div class="ro-label">Kwota od osoby</div>
+    <div class="ro-main"><span id="perPerson">0,00</span><span class="cur" id="curOut1">zł</span></div>
+    <div class="ro-sub">
+      <div class="stat"><div class="k">Koszt całkowity</div><div class="v"><span id="total">0,00</span> <span id="curOut2">zł</span></div></div>
+      <div class="stat"><div class="k">Zużyte paliwo</div><div class="v"><span id="fuel">0,0</span> l</div></div>
+    </div>
+  </section>
+
+  <!-- Inputs -->
+  <div class="card">
+    <div class="field">
+      <div class="flabel">Dystans</div>
+      <div class="row">
+        <input class="num" id="dist" type="text" inputmode="decimal" placeholder="0" autocomplete="off">
+        <div class="seg" role="group" aria-label="Jednostka dystansu">
+          <button type="button" data-dist="km"   aria-pressed="true">km</button>
+          <button type="button" data-dist="mile" aria-pressed="false">mile</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="flabel">Spalanie</div>
+      <div class="row">
+        <input class="num" id="cons" type="text" inputmode="decimal" placeholder="0" autocomplete="off">
+        <div class="seg" role="group" aria-label="Jednostka spalania">
+          <button type="button" data-cons="l100" aria-pressed="true">l/100</button>
+          <button type="button" data-cons="mpg"  aria-pressed="false">MPG</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="flabel">Cena za litr</div>
+      <div class="row">
+        <input class="num" id="price" type="text" inputmode="decimal" placeholder="0,00" autocomplete="off">
+        <input class="cur-in" id="cur" type="text" value="zł" maxlength="4" aria-label="Waluta" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="flabel">Liczba osób</div>
+      <div class="stepper">
+        <button type="button" id="minus" aria-label="Mniej osób">−</button>
+        <div class="count" id="people">4</div>
+        <button type="button" id="plus" aria-label="Więcej osób">+</button>
+      </div>
+    </div>
+  </div>
+
+  <button class="install" id="install">Zainstaluj na ekranie głównym</button>
+  <p class="hint">l/100 = litry na 100 km · MPG = mile na galon (US).<br>Apka działa offline i pamięta ostatnie wartości.</p>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const KM_PER_MILE = 1.609344, MPG_TO_L100 = 235.214583;
+const S = { distUnit:'km', consUnit:'l100', people:4 };
+
+const nf = (n,d) => new Intl.NumberFormat('pl-PL',
+  {minimumFractionDigits:d, maximumFractionDigits:d}).format(isFinite(n)?n:0);
+const parse = el => { const v = parseFloat((el.value||'').replace(',','.')); return isFinite(v)&&v>0 ? v : 0; };
+
+function compute(){
+  const dist = parse($('dist'));
+  const cons = parse($('cons'));
+  const price = parse($('price'));
+  const distKm = S.distUnit==='km' ? dist : dist*KM_PER_MILE;
+  const l100   = S.consUnit==='l100' ? cons : (cons>0 ? MPG_TO_L100/cons : 0);
+  const fuel   = distKm/100 * l100;
+  const total  = fuel * price;
+  const per    = S.people>0 ? total/S.people : total;
+
+  $('fuel').textContent      = nf(fuel,1);
+  $('total').textContent     = nf(total,2);
+  $('perPerson').textContent = nf(per,2);
+  const c = $('cur').value || 'zł';
+  $('curOut1').textContent = c; $('curOut2').textContent = c;
+  save();
+}
+
+function setSeg(group, val){
+  document.querySelectorAll(`[data-${group}]`).forEach(b=>{
+    b.setAttribute('aria-pressed', b.dataset[group]===val ? 'true':'false');
+  });
+  if(group==='dist') S.distUnit=val; else S.consUnit=val;
+  compute();
+}
+
+document.querySelectorAll('[data-dist]').forEach(b=>b.onclick=()=>setSeg('dist',b.dataset.dist));
+document.querySelectorAll('[data-cons]').forEach(b=>b.onclick=()=>setSeg('cons',b.dataset.cons));
+['dist','cons','price','cur'].forEach(id=>$(id).addEventListener('input',compute));
+
+$('plus').onclick  = ()=>{ S.people++; $('people').textContent=S.people; compute(); };
+$('minus').onclick = ()=>{ if(S.people>1){ S.people--; $('people').textContent=S.people; compute(); } };
+
+/* ---- persistence ---- */
+function save(){
+  try{ localStorage.setItem('fuel', JSON.stringify({
+    dist:$('dist').value, cons:$('cons').value, price:$('price').value,
+    cur:$('cur').value, du:S.distUnit, cu:S.consUnit, p:S.people })); }catch(e){}
+}
+function load(){
+  let d={}; try{ d=JSON.parse(localStorage.getItem('fuel'))||{}; }catch(e){}
+  if(d.dist!=null) $('dist').value=d.dist;
+  if(d.cons!=null) $('cons').value=d.cons;
+  if(d.price!=null) $('price').value=d.price;
+  if(d.cur) $('cur').value=d.cur;
+  if(d.p) { S.people=d.p; $('people').textContent=d.p; }
+  if(d.du) setSeg('dist',d.du); else compute();
+  if(d.cu) setSeg('cons',d.cu);
+  compute();
+}
+load();
+
+/* ---- install prompt ---- */
+let deferred=null;
+window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); deferred=e; $('install').style.display='block'; });
+$('install').onclick = async ()=>{ if(!deferred)return; deferred.prompt(); await deferred.userChoice; deferred=null; $('install').style.display='none'; };
+window.addEventListener('appinstalled', ()=>{ $('install').style.display='none'; });
+
+/* ---- service worker ---- */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=> navigator.serviceWorker.register('service-worker.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
